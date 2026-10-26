@@ -1,117 +1,64 @@
-const readline = require('readline');
+// Function 1: Fetch weather data using async/await and fetch API
+async function fetchWeatherData(city) {
+    try {
+        // Clear previous error messages first
+        displayError("");
 
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
-
-
-const quizQuestions = [
-    {
-        question: "What does HTML stand for?",
-        options: [
-            "A. Hyper Text Markup Language",
-            "B. High Tech Modern Language",
-            "C. Hyper Transfer Machine Language",
-            "D. None of the above"
-        ],
-        answer: "A"
-    },
-    {
-        question: "Which CSS property is used to change the text color of an element?",
-        options: [
-            "A. font-color",
-            "B. text-color",
-            "C. color",
-            "D. background-color"
-        ],
-        answer: "C"
-    },
-    {
-        question: "Inside which HTML element do we put the JavaScript?",
-        options: [
-            "A. <javascript>",
-            "B. <script>",
-            "C. <js>",
-            "D. <scripting>"
-        ],
-        answer: "B"
-    }
-];
-
-let score = 0;
-let currentQuestionIndex = 0;
-let timer;
-const TIME_LIMIT = 10;
-
-function startQuiz() {
-    console.log("=========================================");
-    console.log("      WELCOME TO THE CLI TRIVIA QUIZ!    ");
-    console.log("=========================================");
-    console.log(`You have ${TIME_LIMIT} seconds to answer each question.\n`);
-    
-    askQuestion();
-}
-
-function askQuestion() {
-    if (currentQuestionIndex < quizQuestions.length) {
-        const q = quizQuestions[currentQuestionIndex];
+        const response = await fetch(`https://api.weather.gov/alerts/active?area=${city}`);
         
-        console.log(`\nQuestion ${currentQuestionIndex + 1}: ${q.question}`);
-        q.options.forEach(option => console.log(option));
+        if (!response.ok) {
+            throw new Error("Failed to fetch weather data");
+        }
 
-      
-        let timeLeft = TIME_LIMIT;
-        timer = setInterval(() => {
-            timeLeft--;
-            if (timeLeft <= 0) {
-                clearInterval(timer);
-                console.log("\n Time's up for this question!");
-                currentQuestionIndex++;
-                askQuestion();
+        const data = await response.json();
+        displayWeather(data, city);
+        return data;
+    } catch (error) {
+        displayError(error.message || "Invalid input or failed API response");
+    }
+}
+
+// Function 2: Dynamically update the DOM with weather details
+function displayWeather(data, city) {
+    const weatherContainer = document.querySelector("#weather-display") || document.getElementById("weather-container");
+    
+    if (weatherContainer) {
+        // Example structure based on rubric requirements (e.g., number of alerts)
+        const totalAlerts = data.features ? data.features.length : 0;
+        weatherContainer.innerHTML = `
+            <h3>Current weather watches, warnings, and advisories for ${city.toUpperCase()}: ${totalAlerts}</h3>
+        `;
+    }
+}
+
+// Function 3: Display user-friendly error messages
+function displayError(message) {
+    const errorContainer = document.querySelector("#error-message") || document.getElementById("error-container");
+    if (errorContainer) {
+        errorContainer.textContent = message;
+        errorContainer.style.display = message ? "block" : "none";
+    }
+}
+
+// Event Listener setup for form submission and clearing input
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.querySelector("#weather-form");
+    const inputField = document.querySelector("#city-input");
+
+    if (form) {
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const cityValue = inputField.value.trim();
+
+            if (cityValue === "") {
+                displayError("Input cannot be empty");
+                return;
             }
-        }, 1000);
 
-        rl.question("\nEnter your choice (A, B, C, or D): ", (userInput) => {
-            clearInterval(timer); 
-            validateAnswer(userInput.trim().toUpperCase(), q.answer);
+            fetchWeatherData(cityValue);
+
+            // Clear input field on submission as required by tests
+            inputField.value = "";
         });
-    } else {
-        endGame();
     }
-}
-
-function validateAnswer(userAnswer, correctAnswer) {
-    if (userAnswer === correctAnswer) {
-        console.log("Correct!");
-        score++;
-    } else {
-        console.log(` Incorrect. The correct answer was ${correctAnswer}.`);
-    }
-
-    currentQuestionIndex++;
-    askQuestion();
-}
-
-function endGame() {
-    console.log("\n=========================================");
-    console.log("               GAME OVER!                ");
-    console.log("=========================================");
-    console.log(`Your Final Score: ${score} / ${quizQuestions.length}`);
-
-   
-    const percentage = ((score / quizQuestions.length) * 100).toFixed(2);
-    console.log(`Performance Percentage: ${percentage}%`);
-
-    if (score === quizQuestions.length) {
-        console.log(" Excellent work! Perfect score!");
-    } else {
-        console.log(" Good effort! Keep practicing.");
-    }
-
-    rl.close();
-}
-
-// Start the game
-startQuiz();
-   
+});
